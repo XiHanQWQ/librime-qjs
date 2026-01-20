@@ -48,7 +48,7 @@ set(QUICKJS_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs/quickjs.c
   ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs/libregexp.c
   ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs/libunicode.c
-  ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs/libbf.c
+  ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs/dtoa.c
   ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs/cutils.c
 )
 
