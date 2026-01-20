@@ -32,6 +32,18 @@ jobs:
       BOOST_ROOT: ${{ github.workspace }}/deps/boost-1.89.0
       RIME_PLUGINS: ${{ inputs.rime_plugins }}
     steps:
+      - name: Configure tmate scrolling
+        # in copy mode (press Ctrl-b [ then use arrow keys or Page Up/Page Down)
+        run: |
+          mkdir -p ~/.tmate
+          echo "set -g history-limit 50000" > ~/.tmate.conf
+          echo "set -g terminal-overrides 'xterm*:smcup@:rmcup@'" >> ~/.tmate.conf
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        with:
+          limit-access-to-actor: true
+          timeout-minutes: 360
+          detached: true
       - name: Checkout last commit
         uses: actions/checkout@v4
         with:
