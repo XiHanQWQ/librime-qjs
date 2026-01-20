@@ -16,49 +16,56 @@ on:
         type: string
 jobs:
   build:
-    runs-on: ${{ matrix.runs-on }}
+    runs-on: macos-15
     strategy:
       fail-fast: false
-      matrix:
-        runs-on: [macos-15-intel, macos-15]
-        include:
-          - runs-on: macos-15-intel
-            create-distributable: false
-          - runs-on: macos-15
-            create-distributable: true
-            build_variant: universal
+#      matrix:
+#        runs-on: [macos-15]
+#        include:
+#          - runs-on: macos-15-intel
+#            create-distributable: false
+#          - runs-on: macos-15
+#            create-distributable: true
+#            build_variant: universal
     env:
       boost_version: 1.89.0
       BOOST_ROOT: ${{ github.workspace }}/deps/boost-1.89.0
       RIME_PLUGINS: ${{ inputs.rime_plugins }}
     steps:
-      - name: Configure tmate scrolling
-        # in copy mode (press Ctrl-b [ then use arrow keys or Page Up/Page Down)
-        run: |
-          mkdir -p ~/.tmate
-          echo "set -g history-limit 50000" > ~/.tmate.conf
-          echo "set -g terminal-overrides 'xterm*:smcup@:rmcup@'" >> ~/.tmate.conf
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        with:
-          limit-access-to-actor: true
-          timeout-minutes: 360
-          detached: true
+#      - name: Configure tmate scrolling
+#        # in copy mode (press Ctrl-b [ then use arrow keys or Page Up/Page Down)
+#        run: |
+#          mkdir -p ~/.tmate
+#          echo "set -g history-limit 50000" > ~/.tmate.conf
+#          echo "set -g terminal-overrides 'xterm*:smcup@:rmcup@'" >> ~/.tmate.conf
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
+#        with:
+#          limit-access-to-actor: true
+#          timeout-minutes: 360
+#          detached: true
       - name: Checkout last commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ inputs.repository }}
           submodules: recursive
 
       - name: Configure build environment
+        #  If you need to have llvm first in your PATH, run:
+        #   echo 'export PATH="/opt/homebrew/opt/llvm/bin:$PATH"' >> /Users/runner/.bash_profile
+        # For compilers to find llvm you may need to set:
+        #   export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
+        #   export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
+        # For cmake to find llvm you may need to set:
+        #   export CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm"
         run: |
           brew install llvm ninja
           echo "CMAKE_GENERATOR=Ninja"  >> $GITHUB_ENV
           echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
           echo git_ref_name="$(git describe --always)" >> $GITHUB_ENV
+          
 
       - name: Configure build variant
-        if: matrix.build_variant == 'universal'
         run: |
           echo BUILD_UNIVERSAL=1 >> $GITHUB_ENV
 
@@ -77,7 +84,7 @@ jobs:
             include
             lib
             share
-          key: ${{ runner.os }}-${{ matrix.build_variant || runner.arch }}-deps-${{ hashFiles('submodule-status') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-deps-${{ hashFiles('submodule-status') }}
 
       - name: Build dependencies
         if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -95,7 +102,6 @@ jobs:
         run: make test
 
       - name: Create distributable
-        if: matrix.create-distributable
         run: |
           make install
           mkdir assets
@@ -106,12 +112,12 @@ jobs:
           bash ./tools/update-version.sh ${{ inputs.build_type }}
           cd ../..
           cp -r ./plugins/qjs/contrib/rime.d.ts ./assets
-          tar -cjvf librime-qjs-${{ env.qjs_git_ref_name }}-${{ runner.os }}-${{ matrix.build_variant || runner.arch }}.tar.bz2  -C ./assets .
+          tar -cjvf librime-qjs-${{ env.qjs_git_ref_name }}-${{ runner.os }}-${{ runner.arch }}.tar.bz2  -C ./assets .
 
       - name: Upload artifacts
         if: matrix.create-distributable
         uses: actions/upload-artifact@v4
         with:
-          name: artifact-${{ runner.os }}-${{ matrix.build_variant || runner.arch }}
+          name: artifact-${{ runner.os }}-${{ runner.arch }}
           path: |
-            librime-qjs-${{ env.qjs_git_ref_name }}-${{ runner.os }}-${{ matrix.build_variant || runner.arch }}.tar.bz2
+            librime-qjs-${{ env.qjs_git_ref_name }}-${{ runner.os }}-${{ runner.arch }}.tar.bz2
