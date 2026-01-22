@@ -15,28 +15,38 @@ JscEngineImpl::~JscEngineImpl() {
 }
 
 void JscEngineImpl::setBaseFolderPath(const char* absolutePath) {
-  baseFolderPath_ = absolutePath;
+  arrBaseFolderPath_.emplace_back(absolutePath);
 }
 
 JSObjectRef JscEngineImpl::createInstanceOfModule(const char* moduleName,
                                                   const std::vector<JSValueRef>& args) {
   JSValueRef exception = nullptr;
-  JSObjectRef instance = JscCodeLoader::createInstanceOfIifeBundledModule(
-      ctx_, baseFolderPath_, moduleName, args, &exception);
+  for (auto& path : arrBaseFolderPath_) {
+    JSObjectRef instance =
+        JscCodeLoader::createInstanceOfIifeBundledModule(ctx_, path, moduleName, args, &exception);
+    if (exception == nullptr) {
+      return instance;
+    }
+  }
   if (exception != nullptr) {
     logErrorStackTrace(exception, __FILE_NAME__, __LINE__);
-    return nullptr;
   }
 
-  return instance;
+  return nullptr;
 }
 
 JSValueRef JscEngineImpl::loadJsFile(const char* fileName) {
   JSValueRef exception = nullptr;
-  const auto* globalThis =
-      JscCodeLoader::loadEsmBundledModuleToGlobalThis(ctx_, baseFolderPath_, fileName, &exception);
+
+  for (auto& path : arrBaseFolderPath_) {
+    const auto* globalThis =
+        JscCodeLoader::loadEsmBundledModuleToGlobalThis(ctx_, path, fileName, &exception);
+    if (exception == nullptr) {
+      return globalThis;
+    }
+  }
   logErrorStackTrace(exception, __FILE_NAME__, __LINE__);
-  return globalThis;
+  return nullptr;
 }
 
 JSValueRef JscEngineImpl::eval(const char* code, const char* filename) {

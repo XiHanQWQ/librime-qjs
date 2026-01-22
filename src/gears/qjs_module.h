@@ -13,10 +13,16 @@ protected:
       : namespace_(nameSpace) {
     // the js engine is lazy loaded, so we need to register the types first
     registerTypesToJsEngine<T_JS_VALUE>();
-    std::filesystem::path path(rime_get_api()->get_user_data_dir());
-    path.append("js");
+
     auto& jsEngine = JsEngine<T_JS_VALUE>::instance();
-    jsEngine.setBaseFolderPath(path.generic_string().c_str());
+
+    const char* dataDirArray[2] = {rime_get_api()->get_user_data_dir(),
+                                   rime_get_api()->get_shared_data_dir()};
+    for (const auto* dataDir : dataDirArray) {
+      std::filesystem::path path(dataDir);
+      path.append("js");
+      jsEngine.setBaseFolderPath(path.generic_string().c_str());
+    }
 
     auto jsEnvironment = jsEngine.wrap(environment);
     std::vector<T_JS_VALUE> args = {jsEnvironment};

@@ -14,66 +14,7 @@
   logError(format, __VA_ARGS__); \
   JS_ThrowReferenceError(ctx, format, __VA_ARGS__);
 
-enum { LOADER_PATH_MAX = 1024 };
-
-// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
-static char qjsBaseFolder[LOADER_PATH_MAX] = {0};
-
-void setQjsBaseFolder(const char* path) {
-  strncpy(qjsBaseFolder, path, LOADER_PATH_MAX);
-}
-
-#ifdef _WIN32
-#include <windows.h>
-__attribute__((constructor)) void initBaseFolder() {
-  char path[LOADER_PATH_MAX];
-  GetModuleFileNameA(NULL, path, LOADER_PATH_MAX);
-  char* last_slash = strrchr(path, '\\');
-  if (last_slash) {
-    *last_slash = '\0';
-    setQjsBaseFolder(path);
-  }
-}
-#endif
-
-#ifdef __APPLE__
-#include <unistd.h>
-#include <limits.h>
-#include <mach-o/dyld.h>  // For _NSGetExecutablePath on macOS
-
-__attribute__((constructor)) void initBaseFolder() {
-  char path[PATH_MAX];
-  uint32_t size = PATH_MAX;
-  // macOS specific path retrieval
-  if (_NSGetExecutablePath(path, &size) == 0) {
-    char* lastSlash = strrchr(path, '/');
-    if (lastSlash) {
-      *lastSlash = '\0';
-      setQjsBaseFolder(path);
-    }
-  }
-}
-#endif
-
-#ifdef __linux__
-#include <unistd.h>
-#include <limits.h>
-
-__attribute__((constructor)) void initBaseFolder() {
-  char path[PATH_MAX];
-  uint32_t size = PATH_MAX;
-  // Linux path retrieval
-  ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
-  if (count != -1) {
-    path[count] = '\0';  // Ensure null termination
-    char* lastSlash = strrchr(path, '/');
-    if (lastSlash) {
-      *lastSlash = '\0';
-      setQjsBaseFolder(path);
-    }
-  }
-}
-#endif
+enum { LOADER_PATH_MAX = 1024, MAX_BASE_FOLDERS = 5 };
 
 #ifdef BUILD_FOR_QJS_EXE
 void logInfo(const char* format, ...) {
@@ -132,6 +73,78 @@ void logError(const char* format, ...) {
 
 #endif
 
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static char qjsBaseFolders[MAX_BASE_FOLDERS][LOADER_PATH_MAX] = {{0}};
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables)
+static int qjsBaseFoldersCount = 0;
+
+void setQjsBaseFolder(const char* path) {
+  if (!path || strlen(path) == 0) {
+    return;
+  }
+
+  if (qjsBaseFoldersCount >= MAX_BASE_FOLDERS) {
+    logError("Maximum number of base folders (%d) reached", MAX_BASE_FOLDERS);
+    return;
+  }
+
+  strncpy(qjsBaseFolders[qjsBaseFoldersCount], path, LOADER_PATH_MAX - 1);
+  qjsBaseFolders[qjsBaseFoldersCount][LOADER_PATH_MAX - 1] = '\0';
+  qjsBaseFoldersCount++;
+}
+
+#ifdef _WIN32
+#include <windows.h>
+__attribute__((constructor)) void initBaseFolder() {
+  char path[LOADER_PATH_MAX];
+  GetModuleFileNameA(NULL, path, LOADER_PATH_MAX);
+  char* last_slash = strrchr(path, '\\');
+  if (last_slash) {
+    *last_slash = '\0';
+    setQjsBaseFolder(path);
+  }
+}
+#endif
+
+#ifdef __APPLE__
+#include <unistd.h>
+#include <limits.h>
+#include <mach-o/dyld.h>  // For _NSGetExecutablePath on macOS
+
+__attribute__((constructor)) void initBaseFolder() {
+  char path[PATH_MAX];
+  uint32_t size = PATH_MAX;
+  // macOS specific path retrieval
+  if (_NSGetExecutablePath(path, &size) == 0) {
+    char* lastSlash = strrchr(path, '/');
+    if (lastSlash) {
+      *lastSlash = '\0';
+      setQjsBaseFolder(path);
+    }
+  }
+}
+#endif
+
+#ifdef __linux__
+#include <unistd.h>
+#include <limits.h>
+
+__attribute__((constructor)) void initBaseFolder() {
+  char path[PATH_MAX];
+  uint32_t size = PATH_MAX;
+  // Linux path retrieval
+  ssize_t count = readlink("/proc/self/exe", path, PATH_MAX);
+  if (count != -1) {
+    path[count] = '\0';  // Ensure null termination
+    char* lastSlash = strrchr(path, '/');
+    if (lastSlash) {
+      *lastSlash = '\0';
+      setQjsBaseFolder(path);
+    }
+  }
+}
+#endif
+
 static bool isFileExists(const char* path) {
   FILE* file = fopen(path, "r");
   if (file) {
@@ -141,9 +154,9 @@ static bool isFileExists(const char* path) {
   return false;
 }
 
-static const char* getActualFileName(const char* moduleName) {
-  static char fileNameAttempt[LOADER_PATH_MAX];
-  char fullPath[LOADER_PATH_MAX];
+static const char* getModuleFullPath(const char* moduleName) {
+  static char fullPath[LOADER_PATH_MAX];
+  char fileNameAttempt[LOADER_PATH_MAX];
 
   // has extension and file exists, return moduleName without modification
   const char* extensions[] = {".js", ".mjs", ".cjs"};
@@ -151,8 +164,13 @@ static const char* getActualFileName(const char* moduleName) {
   for (int i = 0; i < numExtensions; i++) {
     unsigned long extLen = strlen(extensions[i]);
     if (strlen(moduleName) > extLen && strcmp(moduleName + strlen(moduleName) - extLen, extensions[i]) == 0) {
-      snprintf(fullPath, sizeof(fullPath), "%s/%s", qjsBaseFolder, moduleName);
-      return isFileExists(fullPath) ? moduleName : NULL;
+      for (int j = 0; j < qjsBaseFoldersCount; j++) {
+        snprintf(fullPath, sizeof(fullPath), "%s/%s", qjsBaseFolders[j], moduleName);
+        if (isFileExists(fullPath)) {
+          return fullPath;
+        }
+      }
+      return NULL;
     }
   }
 
@@ -162,9 +180,11 @@ static const char* getActualFileName(const char* moduleName) {
 
   for (int i = 0; i < numPatterns; i++) {
     snprintf(fileNameAttempt, sizeof(fileNameAttempt), filePatterns[i], moduleName);
-    snprintf(fullPath, sizeof(fullPath), "%s/%s", qjsBaseFolder, fileNameAttempt);
-    if (isFileExists(fullPath)) {
-      return fileNameAttempt;
+    for (int j = 0; j < qjsBaseFoldersCount; j++) {
+      snprintf(fullPath, sizeof(fullPath), "%s/%s", qjsBaseFolders[j], fileNameAttempt);
+      if (isFileExists(fullPath)) {
+        return fullPath;
+      }
     }
   }
   return NULL;
@@ -234,22 +254,24 @@ char* tryFindNodeModuleEntryFileName(const char* folder, const char* key) {
   return NULL;
 }
 
-char* tryFindNodeModuleEntryPath(const char* baseFolder,
-                                 const char* moduleName) {
+char* tryFindNodeModuleEntryPath(const char* moduleName) {
   char folder[LOADER_PATH_MAX];
-  snprintf(folder, sizeof(folder), "%s/node_modules/%s", baseFolder, moduleName);
 
-  char* entryFileName = tryFindNodeModuleEntryFileName(folder, "\"module\":");
-  if (!entryFileName) {
-    entryFileName = tryFindNodeModuleEntryFileName(folder, "\"main\":");
+  for (int j = 0; j < qjsBaseFoldersCount; j++) {
+    snprintf(folder, sizeof(folder), "%s/node_modules/%s", qjsBaseFolders[j], moduleName);
+
+    char* entryFileName = tryFindNodeModuleEntryFileName(folder, "\"module\":");
+    if (!entryFileName) {
+      entryFileName = tryFindNodeModuleEntryFileName(folder, "\"main\":");
+    }
+
+    if (entryFileName) {
+      return entryFileName;
+    }
   }
 
-  if (!entryFileName) {
-    logError("Failed to find the entry file of the node module: %s", moduleName);
-    return NULL;
-  }
-
-  return entryFileName;
+  logError("Failed to find the entry file of the node module: %s", moduleName);
+  return NULL;
 }
 
 char* loadFile(const char* absolutePath) {
@@ -302,21 +324,15 @@ bool isAbsolutePath(const char* path) {
 }
 
 char* readJsCode(JSContext* ctx, const char* moduleName) {
-  if (strlen(qjsBaseFolder) == 0) {
+  if (qjsBaseFoldersCount == 0) {
     LOG_AND_THROW_ERROR(ctx, "basePath is empty in loading js file: %s", moduleName);
     return NULL;
   }
 
-  const char* fileName = getActualFileName(moduleName);
-  if (!fileName) {
+  const char* fullPath = getModuleFullPath(moduleName);
+  if (!fullPath) {
     LOG_AND_THROW_ERROR(ctx, "File not found: %s", moduleName);
     return NULL;
-  }
-  char fullPath[LOADER_PATH_MAX];
-  if (isAbsolutePath(fileName)) {
-    snprintf(fullPath, sizeof(fullPath), "%s", fileName);
-  } else {
-    snprintf(fullPath, sizeof(fullPath), "%s/%s", qjsBaseFolder, fileName);
   }
 
   return loadFile(fullPath);
@@ -356,20 +372,24 @@ JSModuleDef* js_module_loader(JSContext* ctx,
                               const char* moduleName,
                               void* opaque) {
   char fullPath[LOADER_PATH_MAX];
-  if (isAbsolutePath(moduleName)) {
-    snprintf(fullPath, sizeof(fullPath), "%s", moduleName);
-  } else {
-    snprintf(fullPath, sizeof(fullPath), "%s/%s", qjsBaseFolder, moduleName);
+
+  // Try to find the file in any of the registered base folders
+  for (int i = 0; i < qjsBaseFoldersCount; i++) {
+    if (isAbsolutePath(moduleName)) {
+      snprintf(fullPath, sizeof(fullPath), "%s", moduleName);
+    } else {
+      snprintf(fullPath, sizeof(fullPath), "%s/%s", qjsBaseFolders[i], moduleName);
+    }
+
+    const char* actualPath = getActualFilePath(fullPath);
+    if (actualPath) { // file exists, it's a js file outside node_modules
+      JSValue funcObj = loadJsModule(ctx, moduleName);
+      return (JSModuleDef*)JS_VALUE_GET_PTR(funcObj);
+    }
   }
 
-  const char* actualPath = getActualFilePath(fullPath);
-  if (actualPath) { // file exists, it's a js file outside node_modules
-    JSValue funcObj = loadJsModule(ctx, moduleName);
-    return (JSModuleDef*)JS_VALUE_GET_PTR(funcObj);
-  }
-
-  // try to load the file from node_modules
-  char* nodeModuleEntryFile = tryFindNodeModuleEntryPath(qjsBaseFolder, moduleName);
+  // try to load the file from node_modules in the base folders
+  char* nodeModuleEntryFile = tryFindNodeModuleEntryPath(moduleName);
   if (!nodeModuleEntryFile) {
     logError("Failed to load the js module: %s", moduleName);
     return NULL;

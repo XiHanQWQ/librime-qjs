@@ -86,6 +86,6 @@ private:
                             const JSValueRef arguments[],
                             JSValueRef* exception);
   JSGlobalContextRef ctx_{nullptr};
-  std::string baseFolderPath_;
+  std::vector<std::string> arrBaseFolderPath_;
   std::unordered_map<std::string, JSClassRef> clazzes_;
 };

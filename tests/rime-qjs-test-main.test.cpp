@@ -47,7 +47,7 @@ public:
 
     RimeTraits traits = {
         .data_size = sizeof(RimeTraits) - sizeof((traits).data_size),
-        .shared_data_dir = ".",
+        .shared_data_dir = userDataDir_.c_str(),
         .user_data_dir = userDataDir_.c_str(),
         .distribution_name = nullptr,
         .distribution_code_name = nullptr,
