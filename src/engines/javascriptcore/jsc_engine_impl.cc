@@ -15,6 +15,13 @@ JscEngineImpl::~JscEngineImpl() {
 }
 
 void JscEngineImpl::setBaseFolderPath(const char* absolutePath) {
+  // Check for duplicates
+  for (const auto& path : arrBaseFolderPath_) {
+    if (path == absolutePath) {
+      DLOG(INFO) << "[jsc] Base folder already registered: " << absolutePath;
+      return;
+    }
+  }
   arrBaseFolderPath_.emplace_back(absolutePath);
 }
 

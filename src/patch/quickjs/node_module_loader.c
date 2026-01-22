@@ -83,6 +83,14 @@ void setQjsBaseFolder(const char* path) {
     return;
   }
 
+  // Check for duplicates
+  for (int i = 0; i < qjsBaseFoldersCount; i++) {
+    if (strcmp(qjsBaseFolders[i], path) == 0) {
+      // logInfo("Base folder already registered: %s", path);
+      return;
+    }
+  }
+
   if (qjsBaseFoldersCount >= MAX_BASE_FOLDERS) {
     logError("Maximum number of base folders (%d) reached", MAX_BASE_FOLDERS);
     return;
