@@ -95,7 +95,7 @@ if(BUILD_TOOLS)
   )
 
   # Add compile definition to rename the js_module_loader symbol, to replace it with the patched
-  target_compile_definitions(quickjs_libc PRIVATE -Djs_module_loader=js_module_loader_default)
+  target_compile_definitions(quickjs_libc PRIVATE -Djs_module_loader=js_module_loader_default ${qjs_defines})
 
   # Link both libraries
   target_link_libraries(qjs_exe

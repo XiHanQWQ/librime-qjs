@@ -65,7 +65,8 @@ function testEnvUtilities(env) {
   env.engine.processKey('Down')
   env.engine.processKey('InvalidKey')
 
-  assertEquals(env.popen(`echo libRime-qjs`).trim(), 'libRime-qjs')
+  const echo = env.os.name === 'Windows' ? 'cmd.exe /c echo libRime-qjs' : 'echo libRime-qjs'
+  assertEquals(env.popen(echo).trim(), 'libRime-qjs')
 
   const start = new Date()
   const ping = env.os.name === 'Windows' ? 'ping 127.0.0.1 -n 3' : 'ping 127.0.0.1 -t 3'
