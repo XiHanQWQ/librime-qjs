@@ -2,3 +2,6 @@
 	path = thirdparty/quickjs
 	url = https://github.com/quickjs-ng/quickjs.git
 	fetchRecurseSubmodules = false
+[submodule "thirdparty/cpp-subprocess"]
+	path = thirdparty/cpp-subprocess
+	url = https://github.com/arun11299/cpp-subprocess

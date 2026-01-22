@@ -1,26 +1,96 @@
 #include "environment.h"
 
-#include <glog/logging.h>
-#include <stdexcept>
+#include <chrono>
+#include <condition_variable>
+#include <cstdio>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
+
+#include <cpp-subprocess/subprocess.hpp>
+
 #include "process_memory.hpp"
 
-#ifdef _WIN32
-static FILE* popenx(const std::string& command) {
-  return _popen(command.c_str(), "r");
-}
+class ProcessManager {
+public:
+  struct ProcessResult {
+    int exitCode{};
+    std::string output;
+    std::string error;
+    bool timedOut{};
+  };
 
-static int pclosex(FILE* pipe) {
-  return _pclose(pipe);
-}
-#else
-static FILE* popenx(const std::string& command) {
-  return ::popen(command.c_str(), "r");
-}
+  static ProcessResult runWithTimeoutAndCapture(const std::string& command,
+                                                int timeoutInMilliseconds) {
+    ProcessResult result;
+    result.timedOut = false;
 
-static int pclosex(FILE* pipe) {
-  return ::pclose(pipe);
+    try {
+      // [cpp-subprocess](https://github.com/arun11299/cpp-subprocess) is introduced here
+      // as a light-weight (header-only) and cross-platform sub-processing library, to support
+      // terminating the sub-process on timed-out.
+
+      // boost::process is not header only, which would introduce a lot of changes in the CI building.
+      // To avoid the unwanted complexity, cpp-subprocess is better for our requirement.
+      auto proc = std::make_shared<subprocess::Popen>(command, subprocess::output{subprocess::PIPE},
+                                                      subprocess::error{subprocess::PIPE});
+
+      // wait with timeout
+      const auto waiter = std::async(std::launch::async, [proc]() {
+        proc->wait();
+        return true;
+      });
+
+      if (waiter.wait_for(std::chrono::milliseconds(timeoutInMilliseconds)) ==
+          std::future_status::timeout) {
+        result.timedOut = true;
+        proc->kill();
+      }
+
+      constexpr size_t BUFFER_SIZE = 1024;
+      std::vector<char> output(BUFFER_SIZE);
+      subprocess::util::read_all(proc->output(), output);
+      result.output = std::string(output.begin(), output.end());
+
+      if (!result.timedOut) {
+        subprocess::util::read_all(proc->error(), output);
+        result.error = std::string(output.begin(), output.end());
+        result.exitCode = proc->retcode();
+      } else {
+        result.exitCode = -1;
+      }
+
+    } catch (const std::exception& e) {
+      LOG(ERROR) << "Process Exception: command = " << command << ", e.what = " << e.what();
+      result.error = e.what();
+      result.exitCode = -1;
+    }
+
+    return result;
+  }
+};
+
+std::pair<std::string, std::string> Environment::popen(const std::string& command,
+                                                       int timeoutInMilliseconds) {
+  if (command.empty()) {
+    return std::make_pair("", "Command is empty");
+  }
+
+  auto result = ProcessManager::runWithTimeoutAndCapture(command, timeoutInMilliseconds);
+  if (result.timedOut) {
+    const std::string error = "popen timed-out with command = [" + command + "] in " +
+                              std::to_string(timeoutInMilliseconds) + "ms";
+    return std::make_pair("", error);
+  }
+  if (!result.error.empty()) {
+    const std::string error = "popen failed with command = [" + command +
+                              "]: exitCode = " + std::to_string(result.exitCode) +
+                              ", err = " + result.error;
+    return std::make_pair("", error);
+  }
+  return std::make_pair(result.output, "");
 }
-#endif
 
 std::string Environment::formatMemoryUsage(size_t usage) {
   constexpr size_t KILOBYTE = 1024;
@@ -65,31 +135,4 @@ std::string Environment::getRimeInfo() {
      << "Process RSS Mem: " << formatMemoryUsage(residentSet);
 
   return ss.str();
-}
-
-std::string Environment::popen(const std::string& command) {
-  if (command.empty()) {
-    throw std::runtime_error("Command is empty");
-  }
-
-  FILE* pipe = popenx(command);
-  if (pipe == nullptr) {
-    throw std::runtime_error("Failed to run command: " + command);
-  }
-
-  // Read the output
-  constexpr size_t READ_BUFFER_SIZE = 128;
-  char buffer[READ_BUFFER_SIZE];
-  char* ptrBuffer = static_cast<char*>(buffer);
-  std::string result;
-  while (fgets(ptrBuffer, sizeof(buffer), pipe) != nullptr) {
-    result += ptrBuffer;
-  }
-
-  int status = pclosex(pipe);
-  if (status != 0) {
-    throw std::runtime_error("Command failed with status: " + std::to_string(status));
-  }
-
-  return result;
 }

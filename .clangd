@@ -16,7 +16,7 @@ CompileFlags:
     - "-Isrc/**"
     - "-Itests/**"
     - "-Ithirdparty/quickjs/**"
-    - "-Ithirdparty/yas/include"
+    - "-Ithirdparty/cpp-subprocess"
     - "-I../../src"
     - "-I../../src/rime"
     - "-I../../build/src"

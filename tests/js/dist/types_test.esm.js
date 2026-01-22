@@ -73,6 +73,19 @@ function testEnvUtilities(env) {
   env.engine.processKey('Down')
   env.engine.processKey('InvalidKey')
   assertEquals(env.popen(`echo libRime-qjs`).trim(), 'libRime-qjs')
+  const start = new Date()
+  const ping = env.os.name === 'Windows' ? 'ping 127.0.0.1 -n 3' : 'ping 127.0.0.1 -t 3'
+  let isTimedout = false
+  try {
+    const output = env.popen(ping, 500)
+    console.error(`env.popen('ping xxx') should be timed-out, but got ${output}`)
+  } catch (e) {
+    isTimedout = true
+    const end = new Date()
+    assert(end.getTime() < 1e3 + start.getTime(), 'It should be timed-out in 500ms.')
+    console.error('expected timed-out error', e)
+  }
+  assert(isTimedout, `env.popen('ping xxx') should be timed-out`)
   assertEquals(env.fileExists(env.currentFolder + '/js/types_test.js'), true)
   assertEquals(env.fileExists(env.currentFolder + '/js/not_found.js'), false)
   const content = env.loadFile(env.currentFolder + '/js/types_test.js')

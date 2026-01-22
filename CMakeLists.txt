@@ -52,7 +52,9 @@ set(QUICKJS_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs/cutils.c
 )
 
-include_directories(include ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs)
+include_directories(include
+        ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/quickjs
+        ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/cpp-subprocess)
 
 # Create QuickJS library
 add_library(qjs STATIC ${QUICKJS_SOURCES})
