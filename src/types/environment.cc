@@ -2,8 +2,8 @@
 
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
 #include <cstdio>
-#include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
@@ -15,17 +15,15 @@
 class ProcessManager {
 public:
   struct ProcessResult {
-    int exitCode{};
+    int exitCode{0};
     std::string output;
     std::string error;
-    bool timedOut{};
+    bool timedOut{false};
   };
 
   static ProcessResult runWithTimeoutAndCapture(const std::string& command,
                                                 int timeoutInMilliseconds) {
     ProcessResult result;
-    result.timedOut = false;
-
     try {
       // [cpp-subprocess](https://github.com/arun11299/cpp-subprocess) is introduced here
       // as a light-weight (header-only) and cross-platform sub-processing library, to support
@@ -33,34 +31,42 @@ public:
 
       // boost::process is not header only, which would introduce a lot of changes in the CI building.
       // To avoid the unwanted complexity, cpp-subprocess is better for our requirement.
+
+#ifdef _WIN32
+      constexpr bool RUN_IN_SHELL =
+          false;  // cpp-subprocess does not support running in shell on Windows
+#else
+      constexpr bool RUN_IN_SHELL = true;
+#endif
       auto proc = std::make_shared<subprocess::Popen>(command, subprocess::output{subprocess::PIPE},
-                                                      subprocess::error{subprocess::PIPE});
+                                                      subprocess::error{subprocess::PIPE},
+                                                      subprocess::shell{RUN_IN_SHELL});
 
-      // wait with timeout
-      const auto waiter = std::async(std::launch::async, [proc]() {
-        proc->wait();
-        return true;
-      });
+      // timeoutInMilliseconds == 0 means we don't need the result of the command
+      if (timeoutInMilliseconds > 0) {
+        const auto waiter = std::async(std::launch::async, [proc]() {
+          proc->wait();
+          return true;
+        });
 
-      if (waiter.wait_for(std::chrono::milliseconds(timeoutInMilliseconds)) ==
-          std::future_status::timeout) {
-        result.timedOut = true;
-        proc->kill();
+        if (waiter.wait_for(std::chrono::milliseconds(timeoutInMilliseconds)) ==
+            std::future_status::timeout) {
+          result.timedOut = true;
+          result.exitCode = -1;
+          proc->kill();
+        }
+
+        constexpr int BUFFER_SIZE = 1024 * 1024;
+        std::vector<char> buffer(BUFFER_SIZE);
+        subprocess::util::read_all(proc->output(), buffer);
+        result.output = std::string(buffer.begin(), buffer.end());
+
+        if (!result.timedOut) {
+          subprocess::util::read_all(proc->error(), buffer);
+          result.error = std::string(buffer.begin(), buffer.end());
+          result.exitCode = proc->retcode();
+        }
       }
-
-      constexpr size_t BUFFER_SIZE = 1024;
-      std::vector<char> output(BUFFER_SIZE);
-      subprocess::util::read_all(proc->output(), output);
-      result.output = std::string(output.begin(), output.end());
-
-      if (!result.timedOut) {
-        subprocess::util::read_all(proc->error(), output);
-        result.error = std::string(output.begin(), output.end());
-        result.exitCode = proc->retcode();
-      } else {
-        result.exitCode = -1;
-      }
-
     } catch (const std::exception& e) {
       LOG(ERROR) << "Process Exception: command = " << command << ", e.what = " << e.what();
       result.error = e.what();
