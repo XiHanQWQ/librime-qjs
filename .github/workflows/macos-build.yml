@@ -115,7 +115,6 @@ jobs:
           tar -cjvf librime-qjs-${{ env.qjs_git_ref_name }}-${{ runner.os }}-${{ runner.arch }}.tar.bz2  -C ./assets .
 
       - name: Upload artifacts
-        if: matrix.create-distributable
         uses: actions/upload-artifact@v4
         with:
           name: artifact-${{ runner.os }}-${{ runner.arch }}
