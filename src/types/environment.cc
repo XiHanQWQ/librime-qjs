@@ -32,16 +32,17 @@ public:
       // boost::process is not header only, which would introduce a lot of changes in the CI building.
       // To avoid the unwanted complexity, cpp-subprocess is better for our requirement.
 
-#ifdef _WIN32
-      constexpr bool RUN_IN_SHELL =
-          false;  // cpp-subprocess does not support running in shell on Windows
-#else
+#ifdef __APPLE__
+      // macOS: setting subprocess::shell{false} hangs the IME when running commands like 'osascript -e xxx'
       constexpr bool RUN_IN_SHELL = true;
+#else
+      // Windows: cpp-subprocess does not support running command in shell
+      // Linux: setting subprocess::shell{true} on Ubuntu hangs the unit tests on capturing the output
+      constexpr bool RUN_IN_SHELL = false;
 #endif
       auto proc = std::make_shared<subprocess::Popen>(command, subprocess::output{subprocess::PIPE},
                                                       subprocess::error{subprocess::PIPE},
                                                       subprocess::shell{RUN_IN_SHELL});
-
       // timeoutInMilliseconds == 0 means we don't need the result of the command
       if (timeoutInMilliseconds > 0) {
         const auto waiter = std::async(std::launch::async, [proc]() {
