@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 # Set the project name and version
-project(LibrimeQjs VERSION 1.1.0)
+project(LibrimeQjs VERSION 1.3.0)
 
 option(BUILD_TOOLS "Build tools" ON)
 option(BUILD_BENCHMARKS "Run benchmarks" OFF)
