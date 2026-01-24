@@ -29,7 +29,7 @@ protected:
     instance_ = jsEngine.createInstanceOfModule(namespace_.c_str(), args, mainFuncName);
     jsEngine.freeValue(jsEnvironment);
 
-    if (!jsEngine.isObject(instance_)) {
+    if (jsEngine.isException(instance_) || !jsEngine.isObject(instance_)) {
       jsEngine.freeValue(instance_);
       LOG(ERROR) << "[qjs] Error creating an instance of the exported class in " << nameSpace;
       return;
