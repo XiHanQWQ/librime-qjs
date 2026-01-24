@@ -32,6 +32,11 @@ protected:
     if (jsEngine.isException(instance_) || !jsEngine.isObject(instance_)) {
       jsEngine.freeValue(instance_);
       LOG(ERROR) << "[qjs] Error creating an instance of the exported class in " << nameSpace;
+
+      // set the fields to "undefined" to avoid crashing in destruction when calling `jsEngine.freeValue(instance_, mainFunc_, finalizer_)`
+      instance_ = jsEngine.toObject(jsEngine.undefined());
+      mainFunc_ = jsEngine.toObject(jsEngine.undefined());
+      finalizer_ = jsEngine.toObject(jsEngine.undefined());
       return;
     }
 
