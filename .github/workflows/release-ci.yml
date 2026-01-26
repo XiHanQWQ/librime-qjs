@@ -24,7 +24,7 @@ jobs:
     with:
       repository: HuangJian/librime
       ref: ci-build-librime-qjs
-      rime_plugins: ${{ github.repository }}@${{ github.ref_name }} hchunhui/librime-lua lotem/librime-octagram rime/librime-predict
+      rime_plugins: ${{ github.repository }}@${{ github.ref_name }} hchunhui/librime-lua lotem/librime-octagram XiHanQWQ/librime-userdb-cleaner fxliang/librime-predict-leveldb # rime/librime-predict
       build_type: "${{ github.ref == 'refs/heads/main' && 'Nightly' || 'Release' }}"
 
   linux:
@@ -45,7 +45,7 @@ jobs:
           merge-multiple: true
 
       - name: Create Nightly release
-        if: ${{ github.repository == 'HuangJian/librime-qjs' && github.ref == 'refs/heads/main' }}
+        if: ${{ github.repository == 'XiHanQWQ/librime-qjs' && github.ref == 'refs/heads/main' }}
         uses: 'marvinpinto/action-automatic-releases@latest'
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
