@@ -24,7 +24,7 @@ jobs:
     with:
       repository: HuangJian/librime
       ref: ci-build-librime-qjs
-      rime_plugins: ${{ github.repository }}@${{ github.ref_name }} hchunhui/librime-lua lotem/librime-octagram XiHanQWQ/librime-userdb-cleaner lidongpeng36/librime-copilot # fxliang/librime-predict-leveldb # rime/librime-predict
+      rime_plugins: ${{ github.repository }}@${{ github.ref_name }} hchunhui/librime-lua lotem/librime-octagram XiHanQWQ/librime-userdb-cleaner fxliang/librime-predict-leveldb # rime/librime-predict
       build_type: "${{ github.ref == 'refs/heads/main' && 'Nightly' || 'Release' }}"
 
   linux:
