@@ -168,6 +168,20 @@ interface Context {
    * @returns True if menu has candidates
    */
   hasMenu(): boolean
+
+  /**
+   * Get a runtime option value
+   * @param optionName - Name of the option to retrieve
+   * @returns Current value of the option
+   */
+  getOption(optionName: string): boolean
+
+  /**
+   * Set a runtime option value
+   * @param optionName - Name of the option to set
+   * @param value - New value for the option
+   */
+  setOption(optionName: string, value: boolean): void
 }
 
 /**
