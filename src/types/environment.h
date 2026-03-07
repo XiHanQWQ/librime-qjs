@@ -28,6 +28,10 @@ public:
 
   static std::string loadFile(const std::string& path);
   static bool fileExists(const std::string& path);
+  static bool saveFile(const std::string& path, const std::string& content);
+  static bool removeFile(const std::string& path);
+  static bool createDir(const std::string& path, bool exist_ok = false);
+  static bool removeDir(const std::string& path);
   static std::string getRimeInfo();
   static std::pair<std::string, std::string> popen(const std::string& command,
                                                    int timeoutInMilliseconds);

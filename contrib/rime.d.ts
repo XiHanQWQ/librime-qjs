@@ -695,6 +695,36 @@ interface Environment {
   fileExists(absolutePath: string): boolean
 
   /**
+   * Save content to a file
+   * @param absolutePath - Full path to the file to save
+   * @param content - Content to write to file
+   * @returns {boolean} True if file was saved successfully
+   */
+  saveFile(absolutePath: string, content: string): boolean
+
+  /**
+   * Remove a file
+   * @param absolutePath - Full path to the file to remove
+   * @returns {boolean} True if file was removed successfully
+   */
+  removeFile(absolutePath: string): boolean
+
+  /**
+   * Create a directory
+   * @param path - Full path to the directory to create
+   * @param exist_ok - If true, do not raise an error if directory already exists (default: false)
+   * @returns {boolean} True if directory was created successfully
+   */
+  createDir(path: string, exist_ok?: boolean): boolean
+
+  /**
+   * Remove a directory
+   * @param path - Full path to the directory to remove
+   * @returns {boolean} True if directory was removed successfully
+   */
+  removeDir(path: string): boolean
+
+  /**
    * Get Rime version and memory usage information
    * @returns {string} Formatted string with version and memory stats
    */
