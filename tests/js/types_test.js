@@ -116,6 +116,72 @@ function checkArgument(env) {
   return env
 }
 
+function testSaveAndRemoveFile(env) {
+  const testFilePath = env.currentFolder + '/test_save_file.txt'
+  const testContent = 'Hello, World! 你好世界！'
+
+  // Test saveFile
+  const saveResult = env.saveFile(testFilePath, testContent)
+  assert(saveResult === true, 'saveFile should return true on success')
+
+  // Verify file exists
+  assertEquals(env.fileExists(testFilePath), true, 'File should exist after saveFile')
+
+  // Verify file content
+  const loadedContent = env.loadFile(testFilePath)
+  assertEquals(loadedContent, testContent, 'Loaded content should match saved content')
+
+  // Test removeFile
+  const removeResult = env.removeFile(testFilePath)
+  assert(removeResult === true, 'removeFile should return true on success')
+
+  // Verify file is removed
+  assertEquals(env.fileExists(testFilePath), false, 'File should not exist after removeFile')
+
+  // Test removing non-existent file
+  const removeNonExistent = env.removeFile(testFilePath)
+  assert(removeNonExistent === false, 'removeFile should return false for non-existent file')
+
+  console.log('testSaveAndRemoveFile passed')
+}
+
+function testCreateAndRemoveDir(env) {
+  const testDirPath = env.currentFolder + '/test_dir'
+  const testSubDirPath = testDirPath + '/subdir'
+
+  // Test createDir - create new directory
+  const createResult = env.createDir(testDirPath)
+  assert(createResult === true, 'createDir should return true on success')
+
+  // Verify directory exists
+  assertEquals(env.fileExists(testDirPath), true, 'Directory should exist after createDir')
+
+  // Test createDir with exist_ok = true (should not error if exists)
+  const createAgainResult = env.createDir(testDirPath, true)
+  assert(createAgainResult === true, 'createDir with exist_ok=true should return true')
+
+  // Test createDir with exist_ok = false (should fail if exists)
+  const createAgainNoExistOk = env.createDir(testDirPath, false)
+  assert(createAgainNoExistOk === false, 'createDir with exist_ok=false should return false if exists')
+
+  // Test createDir - create nested directory
+  const createNestedResult = env.createDir(testSubDirPath, true)
+  assert(createNestedResult === true, 'createDir for nested dir should return true')
+
+  // Test removeDir - remove directory
+  const removeResult = env.removeDir(testDirPath)
+  assert(removeResult === true, 'removeDir should return true on success')
+
+  // Verify directory is removed
+  assertEquals(env.fileExists(testDirPath), false, 'Directory should not exist after removeDir')
+
+  // Test removing non-existent directory
+  const removeNonExistent = env.removeDir(testDirPath)
+  assert(removeNonExistent === false, 'removeDir should return false for non-existent directory')
+
+  console.log('testCreateAndRemoveDir passed')
+}
+
 function testEnvUtilities(env) {
   const info = env.getRimeInfo()
   console.log(`Rime info = ${info}`)
@@ -152,6 +218,12 @@ function testEnvUtilities(env) {
 
   assertEquals(env.fileExists(env.currentFolder + '/js/types_test.js'), true)
   assertEquals(env.fileExists(env.currentFolder + '/js/not_found.js'), false)
+
+  // Test saveFile and removeFile
+  testSaveAndRemoveFile(env)
+
+  // Test createDir and removeDir
+  testCreateAndRemoveDir(env)
 
   // test load file with utf-8 chars
   const content = env.loadFile(env.currentFolder + '/js/types_test.js')

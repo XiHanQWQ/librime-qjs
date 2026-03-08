@@ -36,6 +36,47 @@ class JsWrapper<Environment> {
     return engine.wrap(Environment::fileExists(path));
   })
 
+  DEFINE_CFUNCTION_ARGC(saveFile, 2, {
+    std::string path = engine.toStdString(argv[0]);
+    std::string content = engine.toStdString(argv[1]);
+    if (path.empty()) {
+      throw JsException(JsErrorType::SYNTAX, "The absolutePath argument should be a string");
+    }
+    return engine.wrap(Environment::saveFile(path, content));
+  })
+
+  DEFINE_CFUNCTION_ARGC(removeFile, 1, {
+    std::string path = engine.toStdString(argv[0]);
+    if (path.empty()) {
+      throw JsException(JsErrorType::SYNTAX, "The absolutePath argument should be a string");
+    }
+    return engine.wrap(Environment::removeFile(path));
+  })
+
+  DEFINE_CFUNCTION_ARGC(createDir, 1, {
+    std::string path = engine.toStdString(argv[0]);
+    if (path.empty()) {
+      throw JsException(JsErrorType::SYNTAX, "The path argument should be a string");
+    }
+    bool exist_ok = false;
+    if (argc > 1) {
+      // Check if second argument is a boolean
+      if (!engine.isBool(argv[1])) {
+        throw JsException(JsErrorType::TYPE, "The exist_ok argument must be a boolean");
+      }
+      exist_ok = engine.toBool(argv[1]);
+    }
+    return engine.wrap(Environment::createDir(path, exist_ok));
+  })
+
+  DEFINE_CFUNCTION_ARGC(removeDir, 1, {
+    std::string path = engine.toStdString(argv[0]);
+    if (path.empty()) {
+      throw JsException(JsErrorType::SYNTAX, "The path argument should be a string");
+    }
+    return engine.wrap(Environment::removeDir(path));
+  })
+
   DEFINE_CFUNCTION(getRimeInfo, {
     auto info = Environment::getRimeInfo();
     int64_t bytes = engine.getMemoryUsage();
@@ -64,5 +105,5 @@ public:
       WITHOUT_CONSTRUCTOR,
       WITHOUT_PROPERTIES,
       WITH_GETTERS(id, engine, namespace, userDataDir, sharedDataDir, os),
-      WITH_FUNCTIONS(loadFile, 1, fileExists, 1, getRimeInfo, 0, popen, 1));
+      WITH_FUNCTIONS(loadFile, 1, fileExists, 1, saveFile, 2, removeFile, 1, createDir, 1, removeDir, 1, getRimeInfo, 0, popen, 1));
 };

@@ -131,6 +131,46 @@ bool Environment::fileExists(const std::string& path) {
   return std::filesystem::exists(path);
 }
 
+bool Environment::saveFile(const std::string& path, const std::string& content) {
+  if (path.empty()) {
+    return false;
+  }
+  FILE* file = fopen(path.c_str(), "wb");
+  if (file == nullptr) {
+    return false;
+  }
+  size_t written = fwrite(content.data(), 1, content.size(), file);
+  fclose(file);
+  return written == content.size();
+}
+
+bool Environment::removeFile(const std::string& path) {
+  if (path.empty()) {
+    return false;
+  }
+  return std::filesystem::remove(path);
+}
+
+bool Environment::createDir(const std::string& path, bool exist_ok) {
+  if (path.empty()) {
+    return false;
+  }
+  std::error_code ec;
+  if (exist_ok) {
+    std::filesystem::create_directories(path, ec);
+  } else {
+    std::filesystem::create_directory(path, ec);
+  }
+  return !ec;
+}
+
+bool Environment::removeDir(const std::string& path) {
+  if (path.empty()) {
+    return false;
+  }
+  return std::filesystem::remove(path);
+}
+
 std::string Environment::getRimeInfo() {
   size_t vmUsage = 0;
   size_t residentSet = 0;  // memory usage in bytes
