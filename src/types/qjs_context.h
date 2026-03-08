@@ -50,6 +50,20 @@ class JsWrapper<rime::Context> {
     return engine.wrap(obj->HasMenu());
   })
 
+  DEFINE_CFUNCTION_ARGC(getOption, 1, {
+    std::string optionName = engine.toStdString(argv[0]);
+    auto* obj = engine.unwrap<Context>(thisVal);
+    return engine.wrap(obj->get_option(optionName));
+  })
+
+  DEFINE_CFUNCTION_ARGC(setOption, 2, {
+    std::string optionName = engine.toStdString(argv[0]);
+    bool value = engine.toBool(argv[1]);
+    auto* obj = engine.unwrap<Context>(thisVal);
+    obj->set_option(optionName, value);
+    return engine.undefined();
+  })
+
 public:
   EXPORT_CLASS_WITH_RAW_POINTER(Context,
                                 WITHOUT_CONSTRUCTOR,
@@ -61,5 +75,5 @@ public:
                                              updateNotifier,
                                              deleteNotifier,
                                              commitHistory),
-                                WITH_FUNCTIONS(commit, 0, getCommitText, 0, clear, 0, hasMenu, 0));
+                                WITH_FUNCTIONS(commit, 0, getCommitText, 0, clear, 0, hasMenu, 0, getOption, 1, setOption, 2));
 };

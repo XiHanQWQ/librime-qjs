@@ -92,6 +92,9 @@ function checkArgument(env) {
 
   config.setString('greet', 'hello from js')
 
+  // Test engine.getOption() and engine.setOption()
+  testEngineOptions(env)
+
   const context = env.engine.context
   assertEquals(context.input, 'hello')
 
@@ -114,6 +117,31 @@ function checkArgument(env) {
   testLevelDb(env)
 
   return env
+}
+
+function testEngineOptions(env) {
+  const context = env.engine.context
+
+  // Test getOption - should return boolean
+  // Note: default option values depend on schema configuration
+  const asciiMode = context.getOption('ascii_mode')
+  assert(typeof asciiMode === 'boolean', 'getOption should return boolean')
+
+  // Test setOption
+  context.setOption('ascii_mode', true)
+  assertEquals(context.getOption('ascii_mode'), true, 'setOption should change option value')
+
+  context.setOption('ascii_mode', false)
+  assertEquals(context.getOption('ascii_mode'), false, 'setOption should change option value')
+
+  // Test with a custom option name
+  const testOption = context.getOption('test_custom_option')
+  assert(typeof testOption === 'boolean', 'getOption for non-existent option should return boolean')
+
+  context.setOption('test_custom_option', true)
+  assertEquals(context.getOption('test_custom_option'), true, 'setOption should create new option')
+
+  console.log('testEngineOptions passed')
 }
 
 function testSaveAndRemoveFile(env) {
