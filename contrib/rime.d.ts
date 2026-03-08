@@ -431,6 +431,21 @@ interface Config {
   getList(path: string): ConfigList | null
 
   /**
+   * Get configuration value as JavaScript object
+   * Recursively converts config value to JS object (scalar, array, or nested object)
+   * @param path - Configuration path
+   * @returns {any} JavaScript value: null, string, number, boolean, array, or object
+   */
+  /**
+   * Get configuration value as JavaScript object
+   * Recursively converts config value to JS object (scalar, array, or nested object)
+   * If no path is provided, returns the entire config as a JS object
+   * @param path - Configuration path (optional)
+   * @returns {any} JavaScript value: null, string, number, boolean, array, or object
+   */
+  getObject(path?: string): any
+
+  /**
    * Set boolean value by path
    * @param path - Configuration path
    * @param value - New value to set

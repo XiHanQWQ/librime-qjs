@@ -1,5 +1,70 @@
 import { assert, assertEquals } from "./testutils"
 
+function testGetObject(config) {
+  // Test getObject without arguments (returns full config object)
+  const fullConfig = config.getObject()
+  assert(fullConfig !== null && typeof fullConfig === 'object', 'getObject() should return an object')
+
+  // Test getting a boolean as object
+  const boolVal = config.getObject('key1')
+  assertEquals(boolVal, true, 'getObject should return boolean value')
+
+  // Test getting another boolean
+  const boolVal2 = config.getObject('key2')
+  assertEquals(boolVal2, false, 'getObject should return false boolean value')
+
+  // Test getting an integer as object
+  const intVal = config.getObject('key3')
+  assertEquals(intVal, 666, 'getObject should return integer value')
+
+  // Test getting a double as object
+  const doubleVal = config.getObject('key4')
+  assertEquals(doubleVal, 0.999, 'getObject should return double value')
+
+  // Test getting a string as object
+  const strVal = config.getObject('key5')
+  assertEquals(strVal, 'string', 'getObject should return string value')
+
+  // Test getting a list as object (array)
+  const listVal = config.getObject('list')
+  assert(Array.isArray(listVal), 'getObject should return array for list')
+  assertEquals(listVal.length, 3, 'list should have 3 items')
+  assertEquals(listVal[0], 'item1', 'first item should be item1')
+  assertEquals(listVal[1], 'item2', 'second item should be item2')
+  assertEquals(listVal[2], 'item3', 'third item should be item3')
+
+  // Test getting non-existent key returns null
+  const nullVal = config.getObject('nonexistent')
+  assertEquals(nullVal, null, 'getObject should return null for non-existent key')
+
+  // Test nested path (boolean)
+  const nestedBool = config.getObject('nested/bool')
+  assertEquals(nestedBool, true, 'getObject should return nested boolean value')
+
+  // Test nested path (string)
+  const nestedString = config.getObject('nested/string')
+  assertEquals(nestedString, 'nested_value', 'getObject should return nested string value')
+
+  // Test list access with @0 index
+  const listItem0 = config.getObject('nested/list/@0')
+  assertEquals(listItem0, 'item1', 'getObject should return list item by index @0')
+
+  // Test list access with @1 index
+  const listItem1 = config.getObject('nested/list/@1')
+  assertEquals(listItem1, 'item2', 'getObject should return list item by index @1')
+
+  // Test list access with @2 index
+  const listItem2 = config.getObject('nested/list/@2')
+  assertEquals(listItem2, 'item3', 'getObject should return list item by index @2')
+
+  // Test nested list (full list)
+  const nestedList = config.getObject('nested/list')
+  assert(Array.isArray(nestedList), 'getObject should return nested list as array')
+  assertEquals(nestedList.length, 3, 'nested list should have 3 items')
+
+  console.log('testGetObject passed')
+}
+
 function checkArgument(env) {
   assertEquals(env.namespace, 'namespace')
   assertEquals(env.candidate.text, 'text')
@@ -21,6 +86,9 @@ function checkArgument(env) {
   assertEquals(list.getValueAt(3), null)
 
   assert(!config.getList('none'), 'should not crash if the key does not exist')
+
+  // Test getObject
+  testGetObject(config)
 
   config.setString('greet', 'hello from js')
 
