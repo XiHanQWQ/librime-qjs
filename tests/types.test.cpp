@@ -55,11 +55,16 @@ TYPED_TEST(QuickJSTypesTest, WrapUnwrapRimeTypes) {
   config->SetDouble("key4", A_DOUBLE_NUMBER);
   config->SetString("key5", "string");
 
+  // Nested config for path testing
+  config->SetBool("nested/bool", true);
+  config->SetString("nested/string", "nested_value");
+
   auto list = New<ConfigList>();
   list->Append(New<ConfigValue>("item1"));
   list->Append(New<ConfigValue>("item2"));
   list->Append(New<ConfigValue>("item3"));
   config->SetItem("list", list);
+  config->SetItem("nested/list", list);
 
   auto* context = engine->context();
   ASSERT_TRUE(context != nullptr);
