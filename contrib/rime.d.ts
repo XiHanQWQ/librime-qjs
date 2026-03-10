@@ -168,6 +168,20 @@ interface Context {
    * @returns True if menu has candidates
    */
   hasMenu(): boolean
+
+  /**
+   * Get a runtime option value
+   * @param optionName - Name of the option to retrieve
+   * @returns Current value of the option
+   */
+  getOption(optionName: string): boolean
+
+  /**
+   * Set a runtime option value
+   * @param optionName - Name of the option to set
+   * @param value - New value for the option
+   */
+  setOption(optionName: string, value: boolean): void
 }
 
 /**
@@ -429,6 +443,21 @@ interface Config {
    * @returns {ConfigList | null} List container or null if not found
    */
   getList(path: string): ConfigList | null
+
+  /**
+   * Get configuration value as JavaScript object
+   * Recursively converts config value to JS object (scalar, array, or nested object)
+   * @param path - Configuration path
+   * @returns {any} JavaScript value: null, string, number, boolean, array, or object
+   */
+  /**
+   * Get configuration value as JavaScript object
+   * Recursively converts config value to JS object (scalar, array, or nested object)
+   * If no path is provided, returns the entire config as a JS object
+   * @param path - Configuration path (optional)
+   * @returns {any} JavaScript value: null, string, number, boolean, array, or object
+   */
+  getObject(path?: string): any
 
   /**
    * Set boolean value by path
@@ -693,6 +722,36 @@ interface Environment {
    * @returns {boolean} True if file exists
    */
   fileExists(absolutePath: string): boolean
+
+  /**
+   * Save content to a file
+   * @param absolutePath - Full path to the file to save
+   * @param content - Content to write to file
+   * @returns {boolean} True if file was saved successfully
+   */
+  saveFile(absolutePath: string, content: string): boolean
+
+  /**
+   * Remove a file
+   * @param absolutePath - Full path to the file to remove
+   * @returns {boolean} True if file was removed successfully
+   */
+  removeFile(absolutePath: string): boolean
+
+  /**
+   * Create a directory
+   * @param path - Full path to the directory to create
+   * @param exist_ok - If true, do not raise an error if directory already exists (default: false)
+   * @returns {boolean} True if directory was created successfully
+   */
+  createDir(path: string, exist_ok?: boolean): boolean
+
+  /**
+   * Remove a directory
+   * @param path - Full path to the directory to remove
+   * @returns {boolean} True if directory was removed successfully
+   */
+  removeDir(path: string): boolean
 
   /**
    * Get Rime version and memory usage information
