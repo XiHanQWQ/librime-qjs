@@ -1,12 +1,12 @@
 #pragma once
 
-#include <cstdint>
+#include <cstdint>  // needed for Linux building
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-constexpr const char* MAGIC_KEY_TO_STORE_CONCAT_SEPARATOR = "MAGIC_KEY_TO_STORE_CONCAT_SEPARATOR";
+constexpr auto MAGIC_KEY_TO_STORE_CONCAT_SEPARATOR = "MAGIC_KEY_TO_STORE_CONCAT_SEPARATOR";
 
 enum class OnDuplicatedKey : std::uint8_t {
   Overwrite,

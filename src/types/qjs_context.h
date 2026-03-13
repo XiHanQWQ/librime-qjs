@@ -8,7 +8,7 @@
 using namespace rime;
 
 template <>
-class JsWrapper<rime::Context> {
+class JsWrapper<Context> {
   DEFINE_GETTER(Context, input, obj->input())
   DEFINE_GETTER(Context, caretPos, obj->caret_pos())
 
@@ -75,5 +75,16 @@ public:
                                              updateNotifier,
                                              deleteNotifier,
                                              commitHistory),
-                                WITH_FUNCTIONS(commit, 0, getCommitText, 0, clear, 0, hasMenu, 0, getOption, 1, setOption, 2));
+                                WITH_FUNCTIONS(commit,
+                                               0,
+                                               getCommitText,
+                                               0,
+                                               clear,
+                                               0,
+                                               hasMenu,
+                                               0,
+                                               getOption,
+                                               1,
+                                               setOption,
+                                               2));
 };
