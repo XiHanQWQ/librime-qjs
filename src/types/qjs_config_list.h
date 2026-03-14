@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rime/config.h>
 #include <rime/config/config_types.h>
 #include "engines/js_macros.h"
 #include "js_wrapper.h"
@@ -8,7 +7,7 @@
 using namespace rime;
 
 template <>
-class JsWrapper<rime::ConfigList> {
+class JsWrapper<ConfigList> {
   DEFINE_CFUNCTION(getType, { return engine.wrap("list"); })
 
   DEFINE_CFUNCTION(getSize, {
@@ -66,5 +65,5 @@ public:
       WITHOUT_CONSTRUCTOR,
       WITHOUT_PROPERTIES,
       WITHOUT_GETTERS,
-      WITH_FUNCTIONS(getType, 0, getSize, 0, getItemAt, 1, getValueAt, 1, pushBack, 1, clear, 0));
+      WITH_FUNCTIONS(getType, getSize, getItemAt, getValueAt, pushBack, clear));
 };

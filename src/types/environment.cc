@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <condition_variable>
-#include <cstddef>
 #include <cstdio>
 #include <memory>
 #include <sstream>
@@ -10,7 +9,7 @@
 
 #include <cpp-subprocess/subprocess.hpp>
 
-#include "process_memory.hpp"
+#include "process_memory.h"
 
 class ProcessManager {
 public:
@@ -116,7 +115,7 @@ std::string Environment::loadFile(const std::string& path) {
   }
 
   fseek(file, 0, SEEK_END);
-  long size = ftell(file);
+  const long size = ftell(file);
   fseek(file, 0, SEEK_SET);
 
   std::string content;
@@ -139,7 +138,7 @@ bool Environment::saveFile(const std::string& path, const std::string& content) 
   if (file == nullptr) {
     return false;
   }
-  size_t written = fwrite(content.data(), 1, content.size(), file);
+  const size_t written = fwrite(content.data(), 1, content.size(), file);
   fclose(file);
   return written == content.size();
 }
@@ -151,12 +150,12 @@ bool Environment::removeFile(const std::string& path) {
   return std::filesystem::remove(path);
 }
 
-bool Environment::createDir(const std::string& path, bool exist_ok) {
+bool Environment::createDir(const std::string& path, const bool existOk) {
   if (path.empty()) {
     return false;
   }
   std::error_code ec;
-  if (exist_ok) {
+  if (existOk) {
     std::filesystem::create_directories(path, ec);
   } else {
     std::filesystem::create_directory(path, ec);
@@ -177,9 +176,8 @@ std::string Environment::getRimeInfo() {
   getMemoryUsage(vmUsage, residentSet);
 
   std::stringstream ss{};
-  ss << "libRime v" << rime_get_api()->get_version() << " | "
-     << "libRime-qjs v" << RIME_QJS_VERSION << " | "
-     << "Process RSS Mem: " << formatMemoryUsage(residentSet);
+  ss << "libRime v" << rime_get_api()->get_version() << " | " << "libRime-qjs v" << RIME_QJS_VERSION
+     << " | " << "Process RSS Mem: " << formatMemoryUsage(residentSet);
 
   return ss.str();
 }

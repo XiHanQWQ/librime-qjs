@@ -10,7 +10,7 @@
 using namespace rime;
 
 template <>
-class JsWrapper<rime::Engine> {
+class JsWrapper<Engine> {
   DEFINE_GETTER(Engine, schema, obj->schema())
   DEFINE_GETTER(Engine, context, obj->context())
   DEFINE_GETTER(Engine, activeEngine, obj->active_engine())
@@ -43,5 +43,5 @@ public:
                                 WITHOUT_CONSTRUCTOR,
                                 WITHOUT_PROPERTIES,
                                 WITH_GETTERS(schema, context, activeEngine),
-                                WITH_FUNCTIONS(processKey, 1, commitText, 1, applySchema, 1));
+                                WITH_FUNCTIONS(processKey, commitText, applySchema));
 };

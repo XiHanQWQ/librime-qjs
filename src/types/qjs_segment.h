@@ -9,7 +9,7 @@
 using namespace rime;
 
 template <>
-class JsWrapper<rime::Segment> {
+class JsWrapper<Segment> {
   DEFINE_GETTER(Segment, selectedIndex, obj->selected_index)
   DEFINE_SETTER(Segment, selectedIndex, engine.toInt, obj->selected_index = value)
 
@@ -41,5 +41,5 @@ public:
                                 WITHOUT_CONSTRUCTOR,
                                 WITH_PROPERTIES(selectedIndex, prompt),
                                 WITH_GETTERS(start, end, selectedCandidate, candidateSize),
-                                WITH_FUNCTIONS(getCandidateAt, 1, hasTag, 1));
+                                WITH_FUNCTIONS(getCandidateAt, hasTag));
 };

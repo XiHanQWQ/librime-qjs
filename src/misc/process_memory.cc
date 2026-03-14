@@ -1,5 +1,4 @@
-#pragma once
-
+#include "process_memory.h"
 #include <iostream>
 
 #ifdef __linux__
@@ -45,12 +44,12 @@ void getMemoryUsage(size_t& vm_usage, size_t& resident_set) {
 #include <mach/mach.h>
 #include <unistd.h>  // For getpid()
 
-inline void getMemoryUsage(size_t& vmUsage, size_t& residentSet) {
+void getMemoryUsage(size_t& vmUsage, size_t& residentSet) {
   vmUsage = 0;
   residentSet = 0;
 
   task_t task = MACH_PORT_NULL;
-  struct task_basic_info tInfo{};
+  task_basic_info tInfo{};
   mach_msg_type_number_t tInfoCount = TASK_BASIC_INFO_COUNT;
 
   if (task_for_pid(current_task(), ::getpid(), &task) != KERN_SUCCESS) {

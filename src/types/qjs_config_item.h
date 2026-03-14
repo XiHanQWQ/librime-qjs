@@ -7,7 +7,7 @@
 using namespace rime;
 
 template <>
-class JsWrapper<rime::ConfigItem> {
+class JsWrapper<ConfigItem> {
   DEFINE_CFUNCTION(getType, {
     auto obj = engine.unwrap<rime::ConfigItem>(thisVal);
     const char* strType;
@@ -35,5 +35,5 @@ public:
                                    WITHOUT_CONSTRUCTOR,
                                    WITHOUT_PROPERTIES,
                                    WITHOUT_GETTERS,
-                                   WITH_FUNCTIONS(getType, 0));
+                                   WITH_FUNCTIONS(getType));
 };

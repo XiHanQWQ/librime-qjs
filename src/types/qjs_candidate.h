@@ -11,7 +11,7 @@ using namespace rime;
 constexpr int MIN_ARGC_NEW_CANDIDATE = 5;
 
 template <>
-class JsWrapper<rime::Candidate> {
+class JsWrapper<Candidate> {
   DEFINE_GETTER(Candidate, text, obj->text())
   DEFINE_GETTER(Candidate, comment, obj->comment())
   DEFINE_GETTER(Candidate, type, obj->type())
@@ -64,7 +64,7 @@ class JsWrapper<rime::Candidate> {
 public:
   EXPORT_CLASS_WITH_SHARED_POINTER(
       Candidate,
-      WITH_CONSTRUCTOR(makeCandidate, MIN_ARGC_NEW_CANDIDATE),
+      WITH_CONSTRUCTOR(makeCandidate),
       WITH_PROPERTIES(text, comment, type, start, end, quality, preedit),
       WITHOUT_GETTERS,
       WITHOUT_FUNCTIONS);
