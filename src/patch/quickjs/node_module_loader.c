@@ -2,20 +2,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/errno.h>
 
 #include "node_module_loader.h"
 
 #define LOG_AND_RETURN_ERROR(ctx, format, ...)     \
-  do {                                             \
-    logError(format, ##__VA_ARGS__);               \
-    return JS_ThrowReferenceError(ctx, format, ##__VA_ARGS__); \
-  } while (0)
+  logError(format, ##__VA_ARGS__);                 \
+  return JS_ThrowReferenceError(ctx, format, ##__VA_ARGS__);
 
 #define LOG_AND_THROW_ERROR(ctx, format, ...)      \
-  do {                                             \
-    logError(format, ##__VA_ARGS__);               \
-    JS_ThrowReferenceError(ctx, format, ##__VA_ARGS__);        \
-  } while (0)
+  logError(format, ##__VA_ARGS__);                 \
+  JS_ThrowReferenceError(ctx, format, ##__VA_ARGS__);
 
 enum { LOADER_PATH_MAX = 1024, MAX_BASE_FOLDERS = 5 };
 
@@ -144,8 +141,8 @@ void setQjsBaseFolder(const char* path) {
  */
 __attribute__((constructor)) void initBaseFolder() {
   char path[LOADER_PATH_MAX] = {0};
-  if (osGetExecutablePath(path, sizeof(path)) == 0) {
-#if defined(_WIN32)
+  if (getExecutablePath(path, sizeof(path)) == 0) {
+#ifdef _WIN32
     char* lastSlash = strrchr(path, '\\');
 #else
     char* lastSlash = strrchr(path, '/');
@@ -172,18 +169,17 @@ static FileType getFileType(const char* path) {
   if (STAT_FUNC(path, &st) != 0) {
     if (errno == ENOENT) {
       return FileType_NotExist;
-    } else {
-      return FileType_Error; // other errors (e.g., permission denied)
     }
+    return FileType_Error;  // other errors (e.g., permission denied)
   }
 
   if (S_ISDIR(st.st_mode)) {
     return FileType_Dir;
-  } else if (S_ISREG(st.st_mode)) {
-    return FileType_Reg;
-  } else {
-    return FileType_Other; // other type (like device, pipe, etc.)
   }
+  if (S_ISREG(st.st_mode)) {
+    return FileType_Reg;
+  }
+  return FileType_Other;  // other type (like device, pipe, etc.)
 }
 
 /**
@@ -194,12 +190,12 @@ static FileType getFileType(const char* path) {
  * @param path1 The first part of the path.
  * @param path2 The second part of the path.
  */
-static void joinPath(char* dest, size_t size, const char* path1, const char* path2) {
+static void joinPath(char* dest, const size_t size, const char* path1, const char* path2) {
   if (!path1 || path1[0] == '\0') {
     strncpy(dest, path2, size - 1);
     dest[size - 1] = '\0';
   } else {
-    size_t len1 = strlen(path1);
+    const size_t len1 = strlen(path1);
     const char* sep = (path1[len1 - 1] == '/' || path1[len1 - 1] == '\\') ? "" : "/";
     snprintf(dest, size, "%s%s%s", path1, sep, path2);
   }
@@ -214,9 +210,9 @@ static void joinPath(char* dest, size_t size, const char* path1, const char* pat
 static int hasJsExtension(const char* filename) {
   const char* extensions[] = {".js", ".mjs", ".cjs"};
   const int numExtensions = sizeof(extensions) / sizeof(extensions[0]);
-  size_t len = strlen(filename);
+  const size_t len = strlen(filename);
   for (int i = 0; i < numExtensions; i++) {
-    size_t extLen = strlen(extensions[i]);
+    const size_t extLen = strlen(extensions[i]);
     if (len > extLen && strcmp(filename + len - extLen, extensions[i]) == 0) {
       return 1;
     }
@@ -322,7 +318,7 @@ static char* parsePackageJsonForKey(const char* folder, const char* key) {
       continue;
     }
 
-    size_t len = (size_t)(end - start);
+    const size_t len = (size_t)(end - start);
     entryFileName = (char*)malloc(len + 1);
     if (entryFileName) {
       memcpy(entryFileName, start, len);
@@ -344,7 +340,7 @@ static char* parsePackageJsonForKey(const char* folder, const char* key) {
  */
 char* tryFindNodeModuleEntryFileName(const char* folder) {
   const char* keys[] = {"\"module\":", "\"main\":"};
-  for (int i = 0; i < 2; i++) {
+  for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); i++) {
     char* entry = parsePackageJsonForKey(folder, keys[i]);
     if (entry) {
       char entryFilePath[LOADER_PATH_MAX];
@@ -409,7 +405,7 @@ char* loadFile(const char* absolutePath) {
     return NULL;
   }
 
-  char* content = (char*)malloc((size_t)length + 1);
+  char* content = malloc((size_t)length + 1);
   if (!content) {
     logError("Failed to allocate memory for file: %s", absolutePath);
     fclose(file);
@@ -427,16 +423,6 @@ char* loadFile(const char* absolutePath) {
 
   content[length] = '\0';
   return content;
-}
-
-/**
- * @brief Checks if a path is absolute according to platform rules.
- *
- * @param path The path to check.
- * @return true if absolute, false otherwise.
- */
-bool isAbsolutePath(const char* path) {
-  return osIsAbsolutePath(path) != 0;
 }
 
 /**
@@ -526,7 +512,7 @@ JSModuleDef* js_module_loader(JSContext* ctx, const char* moduleName, void* opaq
       if (JS_IsException(funcObj)) {
         return NULL;
       }
-      JSModuleDef* m = (JSModuleDef*)JS_VALUE_GET_PTR(funcObj);
+      JSModuleDef* m = JS_VALUE_GET_PTR(funcObj);
       JS_FreeValue(ctx, funcObj);
       return m;
     }
@@ -539,11 +525,11 @@ JSModuleDef* js_module_loader(JSContext* ctx, const char* moduleName, void* opaq
     snprintf(subPath, sizeof(subPath), "node_modules/%s/%s", moduleName, entryFile);
     free(entryFile);
 
-    JSValue funcObj = loadJsModule(ctx, subPath);
+    const JSValue funcObj = loadJsModule(ctx, subPath);
     if (JS_IsException(funcObj)) {
       return NULL;
     }
-    JSModuleDef* m = (JSModuleDef*)JS_VALUE_GET_PTR(funcObj);
+    JSModuleDef* m = JS_VALUE_GET_PTR(funcObj);
     JS_FreeValue(ctx, funcObj);
     return m;
   }
