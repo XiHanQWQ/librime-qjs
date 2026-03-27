@@ -14,19 +14,19 @@ on:
         default: Nightly
         required: false
         type: string
+      enable_coverage:
+        default: false
+        required: false
+        type: boolean
+
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: macos-15
     strategy:
       fail-fast: false
-#      matrix:
-#        runs-on: [macos-15]
-#        include:
-#          - runs-on: macos-15-intel
-#            create-distributable: false
-#          - runs-on: macos-15
-#            create-distributable: true
-#            build_variant: universal
     env:
       boost_version: 1.89.0
       BOOST_ROOT: ${{ github.workspace }}/deps/boost-1.89.0
@@ -51,17 +51,10 @@ jobs:
           submodules: recursive
 
       - name: Configure build environment
-        #  If you need to have llvm first in your PATH, run:
-        #   echo 'export PATH="/opt/homebrew/opt/llvm/bin:$PATH"' >> /Users/runner/.bash_profile
-        # For compilers to find llvm you may need to set:
-        #   export LDFLAGS="-L/opt/homebrew/opt/llvm/lib"
-        #   export CPPFLAGS="-I/opt/homebrew/opt/llvm/include"
-        # For cmake to find llvm you may need to set:
-        #   export CMAKE_PREFIX_PATH="/opt/homebrew/opt/llvm"
         run: |
           brew install llvm ninja
           echo "CMAKE_GENERATOR=Ninja"  >> $GITHUB_ENV
-          echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
           echo git_ref_name="$(git describe --always)" >> $GITHUB_ENV
           
 
@@ -120,3 +113,89 @@ jobs:
           name: artifact-${{ runner.os }}-${{ runner.arch }}
           path: |
             librime-qjs-${{ env.qjs_git_ref_name }}-${{ runner.os }}-${{ runner.arch }}.tar.bz2
+
+  coverage:
+    runs-on: macos-15
+    if: inputs.enable_coverage
+    env:
+      boost_version: 1.89.0
+      BOOST_ROOT: ${{ github.workspace }}/deps/boost-1.89.0
+      RIME_PLUGINS: ${{ inputs.rime_plugins }}
+    steps:
+      - name: Checkout last commit
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ inputs.repository }}
+          submodules: recursive
+
+      - name: Configure build environment
+        run: |
+          brew install llvm ninja
+          echo "CMAKE_GENERATOR=Ninja"  >> $GITHUB_ENV
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
+          echo git_ref_name="$(git describe --always)" >> $GITHUB_ENV
+
+      - name: Configure build variant
+        run: |
+          echo BUILD_UNIVERSAL=1 >> $GITHUB_ENV
+
+      - name: Install Boost
+        run: ./install-boost.sh
+
+      - name: Check submodules
+        run: git submodule > submodule-status
+
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            bin
+            include
+            lib
+            share
+          key: ${{ runner.os }}-${{ runner.arch }}-deps-${{ hashFiles('submodule-status') }}
+
+      - name: Build dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: make deps
+
+      - name: Install Rime plugins
+        run: ./action-install-plugins-macos.sh
+
+      - name: Build and test with coverage
+        run: |
+          export CFLAGS="-fprofile-instr-generate -fcoverage-mapping"
+          export CXXFLAGS="-fprofile-instr-generate -fcoverage-mapping"
+          export LDFLAGS="-fprofile-instr-generate -fcoverage-mapping"
+          cmake . -Bbuild -DCMAKE_BUILD_TYPE=Release -DENABLE_COVERAGE=ON -DENABLE_EXTERNAL_PLUGINS=ON -DBUILD_MERGED_PLUGINS=OFF -DBoost_NO_BOOST_CMAKE=TRUE -DBOOST_ROOT="${{ env.BOOST_ROOT }}" -DCMAKE_INSTALL_PREFIX="./dist" -GNinja
+          cmake --build build
+          export LLVM_PROFILE_FILE="code-%p.profraw"
+          (cd build; ctest --output-on-failure)
+
+      - name: Generate coverage report
+        run: |
+          find . -name "*.profraw"
+          TEST_BINARY=$(find . -name "librime-qjs-tests" -type f | head -n 1)
+          PLUGIN_LIB=$(find . -name "librime-qjs.dylib" -type f | head -n 1)
+          PROFRAW_FILES=$(find . -name "*.profraw")
+          echo "Test binary found at: $TEST_BINARY"
+          echo "Plugin library found at: $PLUGIN_LIB"
+          if [ -n "$PROFRAW_FILES" ]; then
+            llvm-profdata merge -sparse $PROFRAW_FILES -o build/test.profdata
+            COV_OBJECTS=""
+            if [ -n "$PLUGIN_LIB" ]; then
+              COV_OBJECTS="-object $PLUGIN_LIB"
+            fi
+            llvm-cov show "$TEST_BINARY" $COV_OBJECTS -instr-profile=build/test.profdata -format=html -output-dir=coverage_report ./plugins/qjs/src
+            llvm-cov report "$TEST_BINARY" $COV_OBJECTS -instr-profile=build/test.profdata ./plugins/qjs/src
+          else
+            echo "No .profraw files found."
+            exit 1
+          fi
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report-macOS
+          path: coverage_report

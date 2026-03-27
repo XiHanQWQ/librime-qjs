@@ -25,7 +25,7 @@
   - 🎉 切换输入法时加载大型插件卡顿严重？现在我们一劳永逸！
   - 🚀 在不同应用间沉浸式写作？插件早已准备就绪！
 - 🛡️ 双剑合璧：C++ 和 JavaScript 的单元测试。
-  - ✅ 每个 Rime API 都经过严格的 [C++ 测试](./tests/)。
+  - ✅ 每个 Rime API 都经过严格的 C++ 测试 ([覆盖率](https://huangjian.github.io/librime-qjs/))。
   - 🧪 JavaScript 插件？随心所欲地用 qjs/nodejs/bun/deno [执行测试](https://github.com/HuangJian/rime-frost/tree/hj/js/tests)。
 
 ## 文档
